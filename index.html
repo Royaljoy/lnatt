@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stewards Attendance</title>
+  <style>
+    :root {
+      --primary-color: #fd2600;
+      --background-color: #111111;
+      --card-background: #ffffff;
+      --text-color: #1f2937;
+      --muted-color: #6b7280;
+      --border-color: #d1d5db;
+      --error-color: #b91c1c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--background-color);
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+
+    /* Background watermark */
+    body::before {
+      content: "STEWARDS \00000a ATTENDANCE";
+      position: fixed;
+      text-align: center;
+      line-height: 0.9;
+      top: 10%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: clamp(2rem, 8vw, 5rem);
+      font-weight: 200;
+      color: rgba(255, 255, 255, 0.174);
+      z-index: -1;
+      white-space: pre-wrap;
+      pointer-events: none;
+      user-select: none;
+      font-family: Impact, sans-serif;
+    }
+
+    .form-container {
+      background: var(--card-background);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .brand-logo-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .brand-logo {
+      max-width: 200px;
+      height: auto;
+      object-fit: contain;
+    }
+
+    h2 { margin: 0 0 20px; font-size: 1.25rem; }
+
+    /* Progress */
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--muted-color);
+      margin-bottom: 6px;
+    }
+
+    .progress-bar-container {
+      background-color: var(--border-color);
+      height: 6px;
+      border-radius: 3px;
+      margin-bottom: 25px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      background-color: var(--primary-color);
+      height: 100%;
+      width: 33.3%;
+      transition: width 0.3s ease;
+    }
+
+    /* Steps */
+    .form-step { display: none; }
+    .form-step.active { display: block; animation: fadeIn 0.4s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .form-step.active { animation: none; }
+      .progress-bar { transition: none; }
+    }
+
+    /* Fields */
+    .form-group { margin-bottom: 20px; }
+    .form-group[hidden] { display: none; }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .hint {
+      font-weight: 400;
+      color: var(--muted-color);
+      font-size: 0.85rem;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="time"],
+    input[type="date"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 1rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+      background-color: #ffffff;
+      color: #1f2937;
+    }
+
+    input:focus, select:focus, textarea:focus { border-color: var(--primary-color); }
+
+    :focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+
+    input[readonly] {
+      background-color: #f3f4f6;
+      color: #374151;
+      cursor: not-allowed;
+    }
+
+    .field-error {
+      color: var(--error-color);
+      font-size: 0.85rem;
+      margin-top: 6px;
+    }
+
+    /* Buttons */
+    .btn-group {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 25px;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-family: inherit;
+      cursor: pointer;
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn-next, .btn-submit {
+      background-color: var(--primary-color);
+      color: white;
+      margin-left: auto;
+    }
+
+    .btn-prev {
+      background-color: var(--border-color);
+      color: var(--text-color);
+    }
+
+    /* Messages */
+    .message { display: none; text-align: center; padding: 20px; }
+    .message.show { display: block; }
+    .message button { margin-top: 16px; background: var(--primary-color); color: #fff; }
+
+    .banner-error {
+      display: none;
+      background: #fef2f2;
+      color: var(--error-color);
+      border: 1px solid #fecaca;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-top: 16px;
+      font-size: 0.9rem;
+    }
+    .banner-error.show { display: block; }
+  </style>
+</head>
+<body>
+
+  <div class="form-container">
+
+    <!-- Logo: keep this file in the same folder, or use a full https:// URL -->
+    <div class="brand-logo-container">
+      <img src="logo.png" alt="Church logo" class="brand-logo"
+           onerror="this.parentElement.style.display='none'">
+    </div>
+
+    <div id="formArea">
+      <div class="progress-meta" aria-live="polite">
+        <span id="stepLabel">Step 1 of 3</span>
+      </div>
+      <div class="progress-bar-container" role="progressbar" aria-valuemin="1" aria-valuemax="3" aria-valuenow="1" id="progressTrack">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+
+      <!-- No action attribute: submission is handled in JS using CONFIG below -->
+      <form id="attendanceForm" novalidate>
+
+        <!-- STEP 1 -->
+        <div class="form-step active">
+          <h2>Personal info</h2>
+
+          <div class="form-group">
+            <label for="name">Full name *</label>
+            <input type="text" id="name" autocomplete="name" required>
+          </div>
+
+          <div class="form-group">
+            <label for="email">Email address *</label>
+            <input type="email" id="email" autocomplete="email" required>
+          </div>
+
+          <div class="form-group">
+            <label for="department">Department *</label>
+            <select id="department" required>
+              <option value="" disabled selected>Select your department</option>
+              <option value="Streams of Life">Streams of Life</option>
+              <option value="Media">Media</option>
+              <option value="Ambience">Ambience</option>
+              <option value="Hospitality">Hospitality</option>
+              <option value="Sanitation">Sanitation</option>
+              <option value="Protocol">Protocol</option>
+              <option value="Pastor's protocol">Pastor's protocol</option>
+              <option value="Follow-Up">Follow-Up</option>
+              <option value="Phillip's Company">Phillip's Company</option>
+              <option value="Children's Department">Children's Department</option>
+              <option value="Prayer">Prayer</option>
+              <option value="Welfare">Welfare</option>
+            </select>
+          </div>
+
+          <div class="btn-group">
+            <button type="button" class="btn-next">Next</button>
+          </div>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="form-step">
+          <h2>Event details</h2>
+
+          <div class="form-group">
+            <label for="event">Event *</label>
+            <select id="event" required>
+              <option value="" disabled selected>Select the event</option>
+              <option value="Sunday Service">Sunday Service</option>
+              <option value="Tuesday Bible Study">Tuesday Bible Study</option>
+              <option value="Friday Prayer Meeting">Friday Prayer Meeting</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="otherEventGroup" hidden>
+            <label for="otherEvent">Name of the event *</label>
+            <input type="text" id="otherEvent">
+          </div>
+
+          <div class="form-group">
+            <label for="attending">Are you attending? *</label>
+            <select id="attending" required>
+              <option value="" disabled selected>Select option</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="permissionGroup" hidden>
+            <label for="permission">Did you get permission for your absence? *</label>
+            <select id="permission">
+              <option value="" disabled selected>Select option</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="typeGroup" hidden>
+            <label for="type">Physical or virtual *</label>
+            <select id="type">
+              <option value="" disabled selected>Select option</option>
+              <option value="Physical">Physical</option>
+              <option value="Virtual">Virtual</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="clockMode">Clock-in time *</label>
+            <select id="clockMode" required>
+              <option value="auto" selected>Use current date and time</option>
+              <option value="manual">Enter date and time manually</option>
+            </select>
+          </div>
+
+          <div id="autoClockGroup">
+            <div class="form-group">
+              <label for="displayDate">Date <span class="hint">(set automatically)</span></label>
+              <input type="native" id="displayDate" readonly tabindex="-1">
+            </div>
+
+            <div class="form-group">
+              <label for="displayTime">Clock-in time <span class="hint">(set when you submit)</span></label>
+              <input type="native" id="displayTime" readonly tabindex="-1">
+            </div>
+          </div>
+
+          <div id="manualClockGroup" hidden>
+            <div class="form-group">
+              <label for="customDate">Date *</label>
+              <input type="date" id="customDate">
+            </div>
+
+            <div class="form-group">
+              <label for="customTime">Clock-in time *</label>
+              <input type="time" id="customTime">
+            </div>
+          </div>
+
+          <div class="btn-group">
+            <button type="button" class="btn-prev">Previous</button>
+            <button type="button" class="btn-next">Next</button>
+          </div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="form-step">
+          <h2>Comments</h2>
+
+          <div class="form-group">
+            <label for="comments">Anything else we should know? <span class="hint">(optional)</span></label>
+            <textarea id="comments" rows="4"></textarea>
+          </div>
+
+          <div class="btn-group">
+            <button type="button" class="btn-prev">Previous</button>
+            <button type="submit" class="btn-submit" id="submitBtn">Submit attendance</button>
+          </div>
+
+          <div class="banner-error" id="submitError" role="alert"></div>
+        </div>
+
+      </form>
+    </div>
+
+    <div id="successMessage" class="message" role="status">
+      <h2>Thank you!</h2>
+      <p>Your attendance has been recorded.</p>
+      <button type="button" id="resetBtn">Submit another response</button>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================
+       CONFIG: fill this in from your Google Form
+       ----------------------------------------------------------
+       1. formUrl: open your form's public link, then copy the long
+          ID from the address bar:
+          https://docs.google.com/forms/d/e/<FORM_ID>/viewform
+          and use: https://docs.google.com/forms/d/e/<FORM_ID>/formResponse
+       2. entries: in the Form, menu (three dots) > "Get pre-filled link".
+          Fill every field, click "Get link", and copy each
+          entry.XXXXXXXXXX ID from the generated URL.
+       3. dateTimeMode:
+          "text"   = your Form's date/time questions are Short answer
+                     (sends "2026-10-04" and "14:30")
+          "native" = your Form uses real Date and Time questions
+                     (sends the split _year/_month/_day and _hour/_minute)
+       ========================================================== */
+    const CONFIG = {
+      formUrl: "https://docs.google.com/forms/d/e/1FAIpQLSdgjE8HK5RRb8UGw6xXnl3i3SAjmKQwsTz9dHJUnpg-CpoLVw/formResponse",
+      dateTimeMode: "text",
+      entries: {
+        name:       "entry.0000000001",
+        email:      "entry.0000000002",
+        department: "entry.0000000003",
+        event:      "entry.0000000004",
+        otherEvent: "entry.0000000005",
+        attending:  "entry.0000000006",
+        permission: "entry.0000000007",
+        type:       "entry.0000000008",
+        time:       "entry.0000000009",
+        date:       "entry.0000000010",
+        comments:   "entry.0000000011"   // set to "" if your Form has no comments question
+      }
+    };
+
+    /* ---------- Elements ---------- */
+    const form = document.getElementById('attendanceForm');
+    const steps = Array.from(document.querySelectorAll('.form-step'));
+    const progressBar = document.getElementById('progressBar');
+    const progressTrack = document.getElementById('progressTrack');
+    const stepLabel = document.getElementById('stepLabel');
+    const formArea = document.getElementById('formArea');
+    const successMessage = document.getElementById('successMessage');
+    const submitBtn = document.getElementById('submitBtn');
+    const submitError = document.getElementById('submitError');
+
+    const eventSel = document.getElementById('event');
+    const otherEventGroup = document.getElementById('otherEventGroup');
+    const otherEvent = document.getElementById('otherEvent');
+    const attending = document.getElementById('attending');
+    const permissionGroup = document.getElementById('permissionGroup');
+    const permission = document.getElementById('permission');
+    const typeGroup = document.getElementById('typeGroup');
+    const typeSel = document.getElementById('type');
+    const displayDate = document.getElementById('displayDate');
+    const displayTime = document.getElementById('displayTime');
+    const clockMode = document.getElementById('clockMode');
+    const autoClockGroup = document.getElementById('autoClockGroup');
+    const manualClockGroup = document.getElementById('manualClockGroup');
+    const customDate = document.getElementById('customDate');
+    const customTime = document.getElementById('customTime');
+
+    let currentStep = 0;
+    let clockTimer = null;
+
+    /* ---------- Step navigation ---------- */
+    function showStep(i) {
+      steps.forEach((s, idx) => s.classList.toggle('active', idx === i));
+      const pct = ((i + 1) / steps.length) * 100;
+      progressBar.style.width = pct + '%';
+      progressTrack.setAttribute('aria-valuenow', i + 1);
+      stepLabel.textContent = 'Step ' + (i + 1) + ' of ' + steps.length;
+      const first = steps[i].querySelector('input:not([readonly]), select, textarea');
+      if (first && i > 0) first.focus({ preventScroll: true });
+    }
+
+    function stepIsValid(index) {
+      const fields = steps[index].querySelectorAll('input, select, textarea');
+      for (const field of fields) {
+        // Skip fields inside hidden groups
+        if (field.closest('[hidden]')) continue;
+        if (!field.checkValidity()) {
+          field.reportValidity();
+          return false;
+        }
+      }
+      return true;
+    }
+
+    document.querySelectorAll('.btn-next').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!stepIsValid(currentStep)) return;
+        currentStep = Math.min(currentStep + 1, steps.length - 1);
+        showStep(currentStep);
+      });
+    });
+
+    document.querySelectorAll('.btn-prev').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentStep = Math.max(currentStep - 1, 0);
+        showStep(currentStep);
+      });
+    });
+
+    /* ---------- Conditional fields ---------- */
+    function setGroup(group, input, visible) {
+      group.hidden = !visible;
+      input.required = visible;
+      if (!visible) input.value = input.tagName === 'SELECT' ? '' : '';
+    }
+
+    function updateConditionals() {
+      setGroup(otherEventGroup, otherEvent, eventSel.value === 'Other');
+
+      const isAttending = attending.value === 'Yes';
+      const isAbsent = attending.value === 'No';
+      setGroup(permissionGroup, permission, isAbsent);
+      setGroup(typeGroup, typeSel, isAttending);
+
+      const manual = clockMode.value === 'manual';
+      manualClockGroup.hidden = !manual;
+      autoClockGroup.hidden = manual;
+      customDate.required = manual;
+      customTime.required = manual;
+      if (manual) {
+        // Prefill with now so the person only edits what differs; no future dates
+        const n = nowParts();
+        const today = n.year + '-' + n.month + '-' + n.day;
+        customDate.max = today;
+        if (!customDate.value) customDate.value = today;
+        if (!customTime.value) customTime.value = n.hour + ':' + n.minute;
+      } else {
+        customDate.value = '';
+        customTime.value = '';
+      }
+    }
+
+    eventSel.addEventListener('change', updateConditionals);
+    attending.addEventListener('change', updateConditionals);
+    clockMode.addEventListener('change', updateConditionals);
+
+    /* ---------- Automatic date and time ---------- */
+    const pad = n => String(n).padStart(2, '0');
+
+    function nowParts() {
+      const d = new Date();
+      return {
+        year: d.getFullYear(),
+        month: pad(d.getMonth() + 1),
+        day: pad(d.getDate()),
+        hour: pad(d.getHours()),
+        minute: pad(d.getMinutes()),
+        pretty: d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+        prettyTime: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+    }
+
+    function tickClock() {
+      const n = nowParts();
+      displayDate.value = n.pretty;
+      displayTime.value = n.prettyTime;
+    }
+
+    function startClock() {
+      tickClock();
+      clearInterval(clockTimer);
+      clockTimer = setInterval(tickClock, 15000);
+    }
+
+    /* ---------- Build and send the payload ---------- */
+    function buildPayload() {
+      const E = CONFIG.entries;
+      const n = nowParts();
+      if (clockMode.value === 'manual' && customDate.value && customTime.value) {
+        const [y, mo, d] = customDate.value.split('-');
+        const [h, mi] = customTime.value.split(':');
+        n.year = y; n.month = mo; n.day = d; n.hour = h; n.minute = mi;
+      }
+      const data = new FormData();
+      const add = (key, value) => { if (key && value !== '' && value != null) data.append(key, value); };
+
+      add(E.name, document.getElementById('name').value.trim());
+      add(E.email, document.getElementById('email').value.trim());
+      add(E.department, document.getElementById('department').value);
+      add(E.event, eventSel.value);
+      add(E.otherEvent, otherEvent.value.trim());
+      add(E.attending, attending.value);
+      add(E.permission, permission.value);
+      add(E.type, typeSel.value);
+      add(E.comments, document.getElementById('comments').value.trim());
+
+      if (CONFIG.dateTimeMode === 'native') {
+        add(E.date + '_year', n.year);
+        add(E.date + '_month', Number(n.month));
+        add(E.date + '_day', Number(n.day));
+        add(E.time + '_hour', Number(n.hour));
+        add(E.time + '_minute', Number(n.minute));
+      } else {
+        add(E.date, n.year + '-' + n.month + '-' + n.day);
+        add(E.time, n.hour + ':' + n.minute);
+      }
+      return data;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      submitError.classList.remove('show');
+
+      // Re-check every step so nothing slips through
+      for (let i = 0; i < steps.length; i++) {
+        if (!stepIsValid(i)) {
+          currentStep = i;
+          showStep(i);
+          stepIsValid(i);
+          return;
+        }
+      }
+
+      if (CONFIG.formUrl.includes('YOUR_FORM_ID')) {
+        submitError.textContent = 'The form is not connected yet. Add your Google Form ID in CONFIG.';
+        submitError.classList.add('show');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+
+      try {
+        // no-cors: Google gives no readable response, so success means "request sent"
+        await fetch(CONFIG.formUrl, { method: 'POST', mode: 'no-cors', body: buildPayload() });
+        clearInterval(clockTimer);
+        formArea.style.display = 'none';
+        successMessage.classList.add('show');
+      } catch (err) {
+        submitError.textContent = 'Could not send your attendance. Check your connection and try again.';
+        submitError.classList.add('show');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit attendance';
+      }
+    });
+
+    /* ---------- Submit another ---------- */
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      form.reset();
+      updateConditionals();
+      currentStep = 0;
+      showStep(0);
+      successMessage.classList.remove('show');
+      formArea.style.display = '';
+      startClock();
+    });
+
+    /* ---------- Init ---------- */
+    updateConditionals();
+    showStep(0);
+    startClock();
+  </script>
+</body>
+</html>
